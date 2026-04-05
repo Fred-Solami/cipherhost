@@ -76,7 +76,7 @@ Optional, depending on what you deploy:
 ## Installation
 
 ```powershell
-git clone <repo-url> C:\CipherHost
+git clone https://github.com/Fred-Solami/cipherhost.git C:\CipherHost
 cd C:\CipherHost
 
 # Backend
