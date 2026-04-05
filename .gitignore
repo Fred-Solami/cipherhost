@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Deployed apps (runtime data)
+apps/
+
+# Snapshots (runtime data)
+snapshots/
+
+# Caddy binary
+caddy/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+
+# IDE
+.vscode/
+.kiro/
