@@ -1,4 +1,4 @@
-export type ProjectType = 'NODEJS' | 'PYTHON' | 'DOTNET' | 'UNKNOWN';
+export type ProjectType = 'NODEJS' | 'PYTHON' | 'DOTNET' | 'PHP' | 'UNKNOWN';
 export type ProcessState = 'RUNNING' | 'STOPPED' | 'CRASHED' | 'DEPLOYING';
 export type UserRole = 'admin' | 'viewer';
 
@@ -108,4 +108,71 @@ export interface DomainRecord {
   ssl_enabled: number;
   ssl_auto: number;
   created_at: string;
+}
+
+// ─── System types ───
+
+export interface ServiceStatus {
+  installed: boolean;
+  running: boolean;
+  name: string;
+  startType: string | null;
+  account: string | null;
+  pid: number | null;
+}
+
+export interface BackupMetadata {
+  id: string;
+  filename: string;
+  path: string;
+  sizeBytes: number;
+  type: 'scheduled' | 'manual' | 'pre-update';
+  createdAt: string;
+}
+
+export interface BackupConfig {
+  enabled: boolean;
+  backupDir: string;
+  networkSharePath: string | null;
+  retentionCount: number;
+  intervalHours: number;
+}
+
+export interface ResourceLimits {
+  maxMemoryMB: number | null;
+  maxRestarts: number;
+}
+
+export interface ResourceSnapshot {
+  projectId: string;
+  name: string;
+  cpu: number;
+  memoryMB: number;
+  memoryLimitMB: number | null;
+  memoryPercent: number | null;
+  uptime: number;
+  status: string;
+  restarts: number;
+}
+
+export interface SystemResources {
+  totalMemoryMB: number;
+  freeMemoryMB: number;
+  usedMemoryMB: number;
+  usedPercent: number;
+  cpuCount: number;
+  uptimeSeconds: number;
+  apps: ResourceSnapshot[];
+}
+
+export interface ApacheStatus {
+  available: boolean;
+  running: boolean;
+  version: string | null;
+  vhostCount: number;
+}
+
+export interface LdapStatus {
+  enabled: boolean;
+  connected: boolean;
 }

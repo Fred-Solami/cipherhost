@@ -40,6 +40,26 @@ import {
   updateWebhookConfig,
   deleteWebhookConfig,
 } from '../controllers/webhook-controller';
+import {
+  getServiceStatus,
+  installService,
+  uninstallService,
+  startService,
+  stopService,
+  restartService,
+  createBackup,
+  listBackups,
+  restoreBackup,
+  getBackupConfig,
+  exportConfig,
+  importConfig,
+  getSystemResources,
+  getResourceLimits,
+  setResourceLimits,
+  getApacheStatus,
+  getLdapStatus,
+  testLdapConnection,
+} from '../controllers/system-controller';
 import { requireRole } from '../middleware/auth';
 
 const router = Router();
@@ -93,5 +113,31 @@ router.post('/processes/:projectId/stop', requireRole('admin'), stopProcess);
 
 router.get('/health', checkSystemHealth);
 router.get('/health/:projectId', checkProjectHealth);
+
+// ─── Windows Service (admin only) ───
+router.get('/system/service', requireRole('admin'), getServiceStatus);
+router.post('/system/service/install', requireRole('admin'), installService);
+router.post('/system/service/uninstall', requireRole('admin'), uninstallService);
+router.post('/system/service/start', requireRole('admin'), startService);
+router.post('/system/service/stop', requireRole('admin'), stopService);
+router.post('/system/service/restart', requireRole('admin'), restartService);
+
+// ─── Backup & Recovery (admin only) ───
+router.get('/system/backups', requireRole('admin'), listBackups);
+router.post('/system/backups', requireRole('admin'), createBackup);
+router.post('/system/backups/restore', requireRole('admin'), restoreBackup);
+router.get('/system/backups/config', requireRole('admin'), getBackupConfig);
+router.get('/system/config/export', requireRole('admin'), exportConfig);
+router.post('/system/config/import', requireRole('admin'), importConfig);
+
+// ─── Resource Monitoring ───
+router.get('/system/resources', getSystemResources);
+router.get('/deployments/:projectId/resources', getResourceLimits);
+router.put('/deployments/:projectId/resources', requireRole('admin'), setResourceLimits);
+
+// ─── Apache & LDAP Status ───
+router.get('/system/apache', requireRole('admin'), getApacheStatus);
+router.get('/system/ldap', requireRole('admin'), getLdapStatus);
+router.post('/system/ldap/test', requireRole('admin'), testLdapConnection);
 
 export default router;

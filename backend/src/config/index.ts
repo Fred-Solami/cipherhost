@@ -57,5 +57,28 @@ export const config = {
     defaultIP: process.env.HOSTS_DEFAULT_IP || '127.0.0.1',
   },
 
+  backup: {
+    backupDir: process.env.BACKUP_DIR || path.join(__dirname, '../../data/backups'),
+    networkSharePath: process.env.BACKUP_NETWORK_SHARE || null,
+    retentionCount: parseInt(process.env.BACKUP_RETENTION_COUNT || '10', 10),
+    intervalHours: parseInt(process.env.BACKUP_INTERVAL_HOURS || '6', 10),
+  },
+
+  apache: {
+    installDir: process.env.APACHE_DIR || 'C:/Apache24',
+    enabled: process.env.APACHE_ENABLED === 'true',
+  },
+
+  ldap: {
+    enabled: process.env.LDAP_ENABLED === 'true',
+    url: process.env.LDAP_URL || '',
+    baseDn: process.env.LDAP_BASE_DN || '',
+    bindDn: process.env.LDAP_BIND_DN || '',
+    bindPassword: process.env.LDAP_BIND_PASSWORD || '',
+    userSearchFilter: process.env.LDAP_USER_FILTER || '(sAMAccountName={{username}})',
+    adminGroups: (process.env.LDAP_ADMIN_GROUPS || '').split(',').filter(Boolean),
+    tlsRejectUnauthorized: process.env.LDAP_TLS_REJECT_UNAUTHORIZED !== 'false',
+  },
+
   serviceAccount: process.env.SERVICE_ACCOUNT || 'CipherHostService',
 };

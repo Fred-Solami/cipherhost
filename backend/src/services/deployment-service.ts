@@ -23,6 +23,7 @@ import { CaddyManager } from './caddy-manager';
 import { HealthMonitor } from './health-monitor';
 import { AuditLogger } from './audit-logger';
 import { HostsManager } from './hosts-manager';
+import { ApacheManager } from './apache-manager';
 
 const execAsync = promisify(exec);
 
@@ -36,6 +37,7 @@ export class DeploymentService {
   private caddy = new CaddyManager();
   private healthMonitor = new HealthMonitor();
   private hostsManager = new HostsManager();
+  private apache = new ApacheManager();
 
   async deployApplication(deployConfig: DeploymentConfig): Promise<DeploymentResult> {
     const projectId = deployConfig.projectId || uuidv4();
@@ -129,24 +131,41 @@ export class DeploymentService {
       );
 
       let processId: string;
-      try {
-        processId = await this.pm2.startProcess(processConfig);
-      } catch (error) {
-        await this.cleanup(projectId, port, null, null);
-        return {
-          success: false,
-          error: `Failed to start process: ${error}`,
-        };
+      if (projectType === 'PHP') {
+        // PHP apps are served by Apache, not PM2
+        try {
+          await this.apache.addVirtualHost(projectId, deployConfig.domain, workDir, port);
+          processId = `apache:${projectId}`;
+        } catch (error) {
+          await this.cleanup(projectId, port, null, null);
+          return {
+            success: false,
+            error: `Apache VirtualHost setup failed: ${error}`,
+          };
+        }
+      } else {
+        try {
+          processId = await this.pm2.startProcess(processConfig);
+        } catch (error) {
+          await this.cleanup(projectId, port, null, null);
+          return {
+            success: false,
+            error: `Failed to start process: ${error}`,
+          };
+        }
       }
 
-      try {
-        await this.caddy.addRoute(deployConfig.domain, port);
-      } catch (error) {
-        await this.cleanup(projectId, port, processId, null);
-        return {
-          success: false,
-          error: `Proxy configuration failed: ${error}`,
-        };
+      // For non-PHP apps, set up Caddy reverse proxy
+      if (projectType !== 'PHP') {
+        try {
+          await this.caddy.addRoute(deployConfig.domain, port);
+        } catch (error) {
+          await this.cleanup(projectId, port, processId, null);
+          return {
+            success: false,
+            error: `Proxy configuration failed: ${error}`,
+          };
+        }
       }
 
       // Update deployment record to RUNNING with process ID
@@ -201,13 +220,21 @@ export class DeploymentService {
     // 1. Stop health monitoring
     this.healthMonitor.stopMonitoring(projectId);
 
-    // 2. Stop and delete PM2 process
+    // 2. Stop and delete PM2 process (or Apache VHost for PHP)
     if (deployment.process_id) {
-      try {
-        await this.pm2.stopProcess(deployment.process_id);
-        await this.pm2.deleteProcess(deployment.process_id);
-      } catch (error) {
-        logger.warn(`Failed to stop PM2 process ${deployment.process_id}: ${error}`);
+      if (deployment.process_id.startsWith('apache:')) {
+        try {
+          await this.apache.removeVirtualHost(projectId);
+        } catch (error) {
+          logger.warn(`Failed to remove Apache VHost for ${projectId}: ${error}`);
+        }
+      } else {
+        try {
+          await this.pm2.stopProcess(deployment.process_id);
+          await this.pm2.deleteProcess(deployment.process_id);
+        } catch (error) {
+          logger.warn(`Failed to stop PM2 process ${deployment.process_id}: ${error}`);
+        }
       }
     }
 

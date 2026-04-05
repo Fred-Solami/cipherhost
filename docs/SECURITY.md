@@ -2,13 +2,15 @@
 
 ## Authentication
 
-CipherHost uses dual authentication. Every API request (except `/health`, `/`, login, and webhooks) must include one of:
+CipherHost supports three authentication methods. Every API request (except `/health`, `/`, login, and webhooks) must include one of:
 
-1. **JWT token** -- `Authorization: Bearer <token>` header. Tokens are issued by `POST /api/auth/login` and contain `userId`, `username`, and `role`. Verified against the `JWT_SECRET` from `.env`.
+1. **JWT token** -- `Authorization: Bearer <token>` header. Tokens are issued by `POST /api/auth/login` and contain `userId`, `username`, and `role`. Verified against the `JWT_SECRET` from `.env`. Tokens expire after 24 hours.
 
 2. **API key** -- `X-Api-Key` header. Compared against the `API_KEY` from `.env`. API key requests are treated as admin.
 
-If neither is present, the request gets a 401.
+3. **LDAP / Active Directory** -- When LDAP is enabled in `.env`, the login endpoint tries local authentication first, then falls back to LDAP. LDAP users are authenticated by binding to the directory server with the user's credentials. Group memberships are mapped to CipherHost roles (admin or viewer). On first LDAP login, a local user record is created automatically.
+
+If none of the above succeeds, the request gets a 401.
 
 ### Default credentials
 
@@ -17,11 +19,27 @@ On first startup, if the users table is empty, CipherHost creates a default admi
 - Username: `admin`
 - Password: `admin123`
 
-Change this immediately after first login.
+Change this immediately after first login. Admins can reset any user's password from the Users page by clicking the key icon next to the user entry.
+
+### Password management
+
+Admins can change any user's password from the Users page. The updated password must be at least 8 characters. Users authenticated via LDAP have their local password hash set to a placeholder (`LDAP_AUTH`) and cannot be used for local login -- they must authenticate through the directory server.
+
+### LDAP configuration
+
+When `LDAP_ENABLED=true`, CipherHost connects to the configured LDAP server using a service account (`LDAP_BIND_DN` / `LDAP_BIND_PASSWORD`). The login flow:
+
+1. Search for the user by `sAMAccountName` (or the configured filter)
+2. Attempt to bind as the found user with the provided password
+3. Extract group memberships from the `memberOf` attribute
+4. Map groups to roles: if any group matches `LDAP_ADMIN_GROUPS`, the user gets admin; otherwise viewer
+5. Create or update the local user record
+
+User input in LDAP search filters is escaped to prevent LDAP injection.
 
 ### Roles
 
-Two roles exist: `admin` and `viewer`. Admins can deploy, delete, restart, and manage users. Viewers have read-only access.
+Two roles exist: `admin` and `viewer`. Admins can deploy, delete, restart, manage users, manage system settings, and create backups. Viewers have read-only access.
 
 ## Localhost restriction
 
@@ -65,6 +83,10 @@ Set-Acl "C:\CipherHost\apps" $acl
 - If an attacker has Windows credentials to the server, they can access CipherHost.
 - There is no built-in rate limiting on the login endpoint.
 - Git credentials for private repos are not encrypted at rest in the database.
+
+## Backup security
+
+Database backups created by the backup manager are stored as plain SQLite files in the configured backup directory. They contain all deployment metadata but not application source code. Config exports include deployment records, environment variables, webhook configs, domain mappings, and user accounts, but exclude password hashes. If you copy backups to a network share (`BACKUP_NETWORK_SHARE`), ensure the share has appropriate access controls.
 
 ## Audit logging
 

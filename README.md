@@ -32,7 +32,7 @@ Frontend (React)  --->  Backend (Express/Node.js)  --->  Caddy (Reverse Proxy)
 ## Features
 
 - Deploy from git repositories or local folders
-- Automatic project type detection (Node.js, Python, .NET)
+- Automatic project type detection (Node.js, Python, .NET, PHP)
 - Port allocation from a configurable range (default 5000-6000)
 - PM2 process management with health checks (30s interval)
 - Caddy reverse proxy configuration via JSON API
@@ -42,8 +42,14 @@ Frontend (React)  --->  Backend (Express/Node.js)  --->  Caddy (Reverse Proxy)
 - Environment variable management per application
 - JWT authentication with role-based access (admin/viewer)
 - API key fallback authentication
+- Active Directory / LDAP authentication with group-to-role mapping
+- Admin password management (change any user password from the Users page)
 - Audit logging of all deployment actions
 - WebSocket log streaming
+- Windows Service installation (run CipherHost as a native Windows Service)
+- Backup and disaster recovery (SQLite snapshots, config export/import, scheduled backups)
+- Per-application resource limits and monitoring (CPU, memory, auto-enforcement)
+- Apache/PHP integration (VirtualHost management for PHP applications)
 - Responsive web UI (works on mobile)
 
 ## Tech Stack
@@ -60,6 +66,8 @@ Frontend (React)  --->  Backend (Express/Node.js)  --->  Caddy (Reverse Proxy)
 | CSS | Tailwind CSS | 3.4 |
 | Git | simple-git | 3.27 |
 | Auth | jsonwebtoken + bcrypt | - |
+| LDAP | ldapts | 7.x |
+| Windows Service | node-windows | 1.x |
 
 ## Prerequisites
 
@@ -72,6 +80,8 @@ Frontend (React)  --->  Backend (Express/Node.js)  --->  Caddy (Reverse Proxy)
 Optional, depending on what you deploy:
 - Python 3.9+ (for Python apps)
 - .NET SDK 6.0+ (for .NET apps)
+- Apache 2.4+ with mod_php (for PHP apps)
+- PHP 8.0+ and Composer (for PHP apps)
 
 ## Installation
 
@@ -104,6 +114,29 @@ APPS_BASE_DIR=C:/CipherHost/apps
 PORT_RANGE_MIN=5000
 PORT_RANGE_MAX=6000
 CADDY_API_URL=http://localhost:2019
+```
+
+Additional settings for enterprise features:
+
+```env
+# Backup
+BACKUP_DIR=C:/CipherHost/backups
+BACKUP_RETENTION_COUNT=10
+BACKUP_INTERVAL_HOURS=24
+BACKUP_NETWORK_SHARE=
+
+# Apache (PHP support)
+APACHE_DIR=C:/Apache24
+APACHE_ENABLED=false
+
+# LDAP / Active Directory
+LDAP_ENABLED=false
+LDAP_URL=ldap://dc.example.com:389
+LDAP_BASE_DN=DC=example,DC=com
+LDAP_BIND_DN=CN=svc-cipherhost,OU=ServiceAccounts,DC=example,DC=com
+LDAP_BIND_PASSWORD=
+LDAP_USER_SEARCH_FILTER=(sAMAccountName={{username}})
+LDAP_ADMIN_GROUPS=CipherHost-Admins
 ```
 
 See `backend/.env.example` for the full list of options.
@@ -176,6 +209,7 @@ From the application detail page you can:
 | Node.js | `package.json` | `npm ci` (or `npm install`), optional build command |
 | Python | `requirements.txt` | Creates venv, `pip install -r requirements.txt` |
 | .NET | `.csproj` | `dotnet restore`, `dotnet build` |
+| PHP | `composer.json`, `index.php` | `composer install`, Laravel auto-detection |
 
 ## Project Structure
 
@@ -195,16 +229,22 @@ cipherhost/
         caddy-manager.ts        -- Caddy JSON API client
         health-monitor.ts       -- HTTP health checks
         git-service.ts          -- Git clone/pull
-        environment-builder.ts  -- npm/pip/dotnet build
+        environment-builder.ts  -- npm/pip/dotnet/composer build
+        project-detector.ts     -- Project type detection
         audit-logger.ts         -- Action audit trail
         hosts-manager.ts        -- Windows hosts file management
+        windows-service.ts      -- Windows Service management
+        backup-manager.ts       -- Backup and disaster recovery
+        resource-monitor.ts     -- CPU/memory monitoring and limits
+        apache-manager.ts       -- Apache VirtualHost management
+        ldap-auth.ts            -- Active Directory / LDAP provider
       utils/          -- Logger (winston)
       index.ts        -- Entry point
     data/             -- SQLite database (created at runtime)
   frontend/
     src/
       components/     -- Layout, ApplicationCard, StatsCard, TechLogo, etc.
-      pages/          -- Dashboard, Applications, AppDetail, Users, Login
+      pages/          -- Dashboard, Applications, AppDetail, Users, Login, SystemSettings
       services/       -- API client (axios)
       store/          -- Zustand stores (auth, logs)
       types/          -- TypeScript interfaces
@@ -215,7 +255,7 @@ cipherhost/
 
 ## Database
 
-SQLite with WAL mode and foreign keys. 8 tables:
+SQLite with WAL mode and foreign keys. 9 tables:
 
 - `deployments` -- application registry (status, type, ports, paths)
 - `port_registry` -- port allocation tracking
@@ -225,6 +265,7 @@ SQLite with WAL mode and foreign keys. 8 tables:
 - `webhook_configs` -- git webhook settings per project
 - `domains` -- domain-to-project mappings with SSL config
 - `audit_logs` -- action audit trail
+- `resource_limits` -- per-application memory and restart limits
 
 ## Troubleshooting
 

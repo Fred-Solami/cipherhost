@@ -11,6 +11,9 @@ import { login } from './controllers/auth-controller';
 import { handleWebhook } from './controllers/webhook-controller';
 import { HealthMonitor } from './services/health-monitor';
 import { CaddyManager } from './services/caddy-manager';
+import { BackupManager } from './services/backup-manager';
+import { ResourceMonitor } from './services/resource-monitor';
+import { ApacheManager } from './services/apache-manager';
 import fs from 'fs';
 import path from 'path';
 
@@ -131,6 +134,27 @@ async function startServer() {
 
     const healthMonitor = new HealthMonitor();
     healthMonitor.resumeAllMonitors();
+
+    // Initialize backup system
+    const backupManager = new BackupManager();
+    backupManager.init();
+    backupManager.startScheduled();
+
+    // Start resource monitoring
+    const resourceMonitor = new ResourceMonitor();
+    resourceMonitor.start();
+
+    // Initialize Apache if enabled
+    if (config.apache?.enabled) {
+      const apache = new ApacheManager();
+      const available = await apache.isAvailable();
+      if (available) {
+        await apache.init();
+        logger.info('Apache integration initialized');
+      } else {
+        logger.warn('Apache enabled but not found at configured path');
+      }
+    }
   } catch (error) {
     logger.error(`Failed to start server: ${error}`);
     process.exit(1);

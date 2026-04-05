@@ -6,8 +6,10 @@ import { getDatabase } from '../config/database';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import { User } from '../models/types';
+import { LdapAuthProvider } from '../services/ldap-auth';
 
 const SALT_ROUNDS = 12;
+const ldap = new LdapAuthProvider();
 
 export async function login(req: Request, res: Response): Promise<void> {
   try {
@@ -19,30 +21,48 @@ export async function login(req: Request, res: Response): Promise<void> {
     }
 
     const db = getDatabase();
+
+    // Try local auth first
     const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as User | undefined;
 
-    if (!user) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
+    if (user && user.password_hash !== 'LDAP_AUTH') {
+      const valid = await bcrypt.compare(password, user.password_hash);
+      if (valid) {
+        const token = jwt.sign(
+          { userId: user.id, username: user.username, role: user.role },
+          config.security.jwtSecret,
+          { expiresIn: '24h' }
+        );
+
+        logger.info(`User ${username} logged in (local)`);
+        res.json({
+          token,
+          user: { id: user.id, username: user.username, role: user.role },
+        });
+        return;
+      }
     }
 
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
+    // Try LDAP auth if enabled
+    if (ldap.isEnabled()) {
+      const ldapResult = await ldap.authenticate(username, password);
+      if (ldapResult) {
+        const token = jwt.sign(
+          { userId: ldapResult.userId, username: ldapResult.username, role: ldapResult.role },
+          config.security.jwtSecret,
+          { expiresIn: '24h' }
+        );
+
+        logger.info(`User ${username} logged in (LDAP)`);
+        res.json({
+          token,
+          user: { id: ldapResult.userId, username: ldapResult.username, role: ldapResult.role },
+        });
+        return;
+      }
     }
 
-    const token = jwt.sign(
-      { userId: user.id, username: user.username, role: user.role },
-      config.security.jwtSecret,
-      { expiresIn: '24h' }
-    );
-
-    logger.info(`User ${username} logged in`);
-    res.json({
-      token,
-      user: { id: user.id, username: user.username, role: user.role },
-    });
+    res.status(401).json({ error: 'Invalid credentials' });
   } catch (error) {
     logger.error(`Login error: ${error}`);
     res.status(500).json({ error: 'Login failed' });

@@ -24,6 +24,8 @@ export class EnvironmentBuilder {
         result = await this.buildNodeJsEnvironment(workDir);
       } else if (projectType === 'DOTNET') {
         result = await this.buildDotNetEnvironment(workDir);
+      } else if (projectType === 'PHP') {
+        result = await this.buildPhpEnvironment(workDir);
       } else {
         return {
           success: false,
@@ -166,6 +168,60 @@ export class EnvironmentBuilder {
       const msg = error instanceof Error ? error.message : String(error);
       this.log(`.NET build failed: ${msg}`);
       return { success: false, message: '.NET build failed', error: msg };
+    }
+  }
+
+  private async buildPhpEnvironment(workDir: string): Promise<BuildResult> {
+    const composerJson = path.join(workDir, 'composer.json');
+
+    try {
+      if (fs.existsSync(composerJson)) {
+        this.log('Running composer install...');
+        const installResult = await this.runCommand('composer install --no-interaction --no-dev --optimize-autoloader', workDir);
+        if (!installResult.success) {
+          // Composer may not be in PATH — try common Windows location
+          this.log('Retrying with full composer path...');
+          const retryResult = await this.runCommand(
+            'php composer.phar install --no-interaction --no-dev --optimize-autoloader',
+            workDir
+          );
+          if (!retryResult.success) throw new Error(retryResult.error);
+        }
+      } else {
+        this.log('No composer.json found, skipping dependency install');
+      }
+
+      // Check for a public/ directory (Laravel, Symfony)
+      const publicDir = path.join(workDir, 'public');
+      if (fs.existsSync(publicDir)) {
+        this.log('Detected public/ directory (framework project)');
+      }
+
+      // Check for artisan (Laravel) and run any pending setup
+      const artisan = path.join(workDir, 'artisan');
+      if (fs.existsSync(artisan)) {
+        this.log('Laravel project detected');
+
+        // Generate .env if .env.example exists and .env doesn't
+        const envExample = path.join(workDir, '.env.example');
+        const envFile = path.join(workDir, '.env');
+        if (fs.existsSync(envExample) && !fs.existsSync(envFile)) {
+          fs.copyFileSync(envExample, envFile);
+          this.log('Copied .env.example to .env');
+
+          const keyResult = await this.runCommand('php artisan key:generate --force', workDir);
+          if (keyResult.success) {
+            this.log('Generated Laravel application key');
+          }
+        }
+      }
+
+      this.log('PHP environment created successfully');
+      return { success: true, message: 'PHP environment created' };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.log(`PHP build failed: ${msg}`);
+      return { success: false, message: 'PHP build failed', error: msg };
     }
   }
 }

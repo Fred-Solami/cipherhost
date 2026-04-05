@@ -45,7 +45,7 @@ function createTables(db: Database.Database): void {
       start_command TEXT NOT NULL,
       build_command TEXT,
       health_check_path TEXT DEFAULT '/',
-      project_type TEXT NOT NULL CHECK(project_type IN ('NODEJS', 'PYTHON', 'DOTNET', 'UNKNOWN')),
+      project_type TEXT NOT NULL CHECK(project_type IN ('NODEJS', 'PYTHON', 'DOTNET', 'PHP', 'UNKNOWN')),
       work_dir TEXT NOT NULL,
       restart_count INTEGER DEFAULT 0,
       last_deployment DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -141,6 +141,15 @@ function createTables(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_webhook_configs_project ON webhook_configs(project_id);
     CREATE INDEX IF NOT EXISTS idx_domains_project ON domains(project_id);
     CREATE INDEX IF NOT EXISTS idx_domains_domain ON domains(domain);
+
+    CREATE TABLE IF NOT EXISTS resource_limits (
+      project_id TEXT PRIMARY KEY,
+      max_memory_mb INTEGER,
+      max_restarts INTEGER NOT NULL DEFAULT 5,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES deployments(project_id) ON DELETE CASCADE
+    );
   `);
 }
 

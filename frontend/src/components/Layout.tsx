@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Activity, FileCode, Users, LogOut, Shield, Eye, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { Activity, FileCode, Users, LogOut, Shield, Eye, PanelLeftClose, PanelLeft, Settings } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 
 export default function Layout() {
@@ -76,6 +76,19 @@ export default function Layout() {
               >
                 <Users className="w-5 h-5" />
                 <span>Users</span>
+              </Link>
+            )}
+            {user?.role === 'admin' && (
+              <Link
+                to="/settings"
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                  isActive('/settings') 
+                    ? 'bg-blue-600/10 text-blue-400' 
+                    : 'text-gray-400 hover:bg-dark-bg'
+                }`}
+              >
+                <Settings className="w-5 h-5" />
+                <span>Settings</span>
               </Link>
             )}
           </nav>

@@ -26,6 +26,16 @@ export class ProjectDetector {
         return 'DOTNET';
       }
 
+      // PHP detection: composer.json or index.php
+      if (
+        fs.existsSync(path.join(workDir, 'composer.json')) ||
+        fs.existsSync(path.join(workDir, 'index.php')) ||
+        fs.existsSync(path.join(workDir, 'public', 'index.php'))
+      ) {
+        logger.debug(`Detected PHP project in ${workDir}`);
+        return 'PHP';
+      }
+
       logger.warn(`Unable to detect project type in ${workDir}`);
       return 'UNKNOWN';
     } catch (error) {
@@ -58,6 +68,18 @@ export class ProjectDetector {
 
     if (!fs.existsSync(requirementsPath) && !fs.existsSync(pyprojectPath)) {
       return { valid: false, error: 'requirements.txt or pyproject.toml not found' };
+    }
+
+    return { valid: true };
+  }
+
+  validatePhpProject(workDir: string): { valid: boolean; error?: string } {
+    const hasComposer = fs.existsSync(path.join(workDir, 'composer.json'));
+    const hasIndex = fs.existsSync(path.join(workDir, 'index.php'));
+    const hasPublicIndex = fs.existsSync(path.join(workDir, 'public', 'index.php'));
+
+    if (!hasComposer && !hasIndex && !hasPublicIndex) {
+      return { valid: false, error: 'No PHP entry point found (composer.json, index.php, or public/index.php)' };
     }
 
     return { valid: true };

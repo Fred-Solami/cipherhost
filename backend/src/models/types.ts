@@ -1,4 +1,4 @@
-export type ProjectType = 'NODEJS' | 'PYTHON' | 'DOTNET' | 'UNKNOWN';
+export type ProjectType = 'NODEJS' | 'PYTHON' | 'DOTNET' | 'PHP' | 'UNKNOWN';
 export type ProcessState = 'RUNNING' | 'STOPPED' | 'CRASHED' | 'DEPLOYING';
 export type PortStatus = 'ALLOCATED' | 'RESERVED' | 'RELEASED';
 export type UserRole = 'admin' | 'viewer';

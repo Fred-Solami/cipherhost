@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, Trash2, Shield, Eye, X } from 'lucide-react';
+import { UserPlus, Trash2, Shield, Eye, X, KeyRound } from 'lucide-react';
 import { userApi } from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { User } from '../types';
@@ -11,6 +11,9 @@ export default function Users() {
   const [showCreate, setShowCreate] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', password: '', role: 'viewer' });
   const [error, setError] = useState('');
+  const [passwordTarget, setPasswordTarget] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users'],
@@ -37,6 +40,17 @@ export default function Users() {
     mutationFn: ({ userId, role }: { userId: string; role: string }) =>
       userApi.update(userId, { role }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  });
+
+  const passwordMutation = useMutation({
+    mutationFn: ({ userId, password }: { userId: string; password: string }) =>
+      userApi.update(userId, { password }),
+    onSuccess: () => {
+      setPasswordTarget(null);
+      setNewPassword('');
+      setPasswordError('');
+    },
+    onError: (err: any) => setPasswordError(err.response?.data?.error || 'Failed to change password'),
   });
 
   if (currentUser?.role !== 'admin') {
@@ -134,6 +148,56 @@ export default function Users() {
         </div>
       )}
 
+      {/* Change Password Modal */}
+      {passwordTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-card border border-dark-border rounded-lg p-5 sm:p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white">
+                Change Password — {passwordTarget.username}
+              </h2>
+              <button onClick={() => { setPasswordTarget(null); setNewPassword(''); setPasswordError(''); }} className="text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {passwordError && (
+              <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-3 py-2 rounded mb-4 text-sm">
+                {passwordError}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">New Password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                placeholder="Min 8 characters"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => { setPasswordTarget(null); setNewPassword(''); setPasswordError(''); }}
+                className="flex-1 bg-dark-bg border border-dark-border text-gray-300 py-2 rounded-lg hover:bg-dark-border transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => passwordMutation.mutate({ userId: passwordTarget.id, password: newPassword })}
+                disabled={passwordMutation.isPending || newPassword.length < 8}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white py-2 rounded-lg transition"
+              >
+                {passwordMutation.isPending ? 'Saving...' : 'Update Password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Users List */}
       {isLoading ? (
         <div className="text-center text-gray-400 py-8">Loading...</div>
@@ -188,6 +252,13 @@ export default function Users() {
                       <Trash2 className="w-4 h-4" />
                     </button>
                   )}
+                  <button
+                    onClick={() => setPasswordTarget(user)}
+                    className="text-gray-400 hover:text-yellow-400 transition p-1"
+                    title="Change password"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>

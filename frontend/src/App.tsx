@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Applications from './pages/Applications';
 import AppDetail from './pages/AppDetail';
 import Users from './pages/Users';
+import SystemSettings from './pages/SystemSettings';
 import Login from './pages/Login';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -35,6 +36,7 @@ function App() {
             <Route path="applications" element={<Applications />} />
             <Route path="applications/:projectId" element={<AppDetail />} />
             <Route path="users" element={<Users />} />
+            <Route path="settings" element={<SystemSettings />} />
           </Route>
         </Routes>
       </BrowserRouter>

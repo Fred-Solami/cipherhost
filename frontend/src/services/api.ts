@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Deployment, DeploymentRequest, ProcessInfo, LoginResponse, User, DeploymentHistory, DeploymentLogs, WebhookConfig, AuditLog, DomainRecord } from '../types';
+import { Deployment, DeploymentRequest, ProcessInfo, LoginResponse, User, DeploymentHistory, DeploymentLogs, WebhookConfig, AuditLog, DomainRecord, ServiceStatus, BackupMetadata, BackupConfig, SystemResources, ResourceLimits, ApacheStatus, LdapStatus } from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -96,6 +96,45 @@ export const processApi = {
   getStatus: (projectId: string) => api.get(`/processes/${projectId}/status`),
   restart: (projectId: string) => api.post(`/processes/${projectId}/restart`),
   stop: (projectId: string) => api.post(`/processes/${projectId}/stop`),
+};
+
+// ─── System: Windows Service ───
+export const serviceApi = {
+  status: () => api.get<ServiceStatus>('/system/service'),
+  install: () => api.post('/system/service/install'),
+  uninstall: () => api.post('/system/service/uninstall'),
+  start: () => api.post('/system/service/start'),
+  stop: () => api.post('/system/service/stop'),
+  restart: () => api.post('/system/service/restart'),
+};
+
+// ─── System: Backup & Recovery ───
+export const backupApi = {
+  list: () => api.get<BackupMetadata[]>('/system/backups'),
+  create: () => api.post<BackupMetadata>('/system/backups'),
+  restore: (filename: string) => api.post('/system/backups/restore', { filename }),
+  config: () => api.get<BackupConfig>('/system/backups/config'),
+  exportConfig: () => api.get('/system/config/export'),
+  importConfig: (data: any) => api.post('/system/config/import', data),
+};
+
+// ─── System: Resource Monitoring ───
+export const resourceApi = {
+  system: () => api.get<SystemResources>('/system/resources'),
+  getLimits: (projectId: string) => api.get<ResourceLimits>(`/deployments/${projectId}/resources`),
+  setLimits: (projectId: string, limits: Partial<ResourceLimits>) =>
+    api.put(`/deployments/${projectId}/resources`, limits),
+};
+
+// ─── System: Apache ───
+export const apacheApi = {
+  status: () => api.get<ApacheStatus>('/system/apache'),
+};
+
+// ─── System: LDAP ───
+export const ldapApi = {
+  status: () => api.get<LdapStatus>('/system/ldap'),
+  test: () => api.post<{ success: boolean; error?: string }>('/system/ldap/test'),
 };
 
 export const healthApi = {

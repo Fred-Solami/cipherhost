@@ -16,7 +16,10 @@ Updated from original versions to current:
 | uuid | 9.0.1 | 11.0.3 |
 | winston | 3.11.0 | 3.17.0 |
 
-Added packages (not in original): `jsonwebtoken`, `bcrypt`, `axios`.
+Added packages (not in original): `jsonwebtoken`, `bcrypt`, `axios`, `node-windows`, `ldapts`.
+
+- `node-windows` -- Installs and manages CipherHost as a native Windows Service. Provides service install, uninstall, start, stop, and restart operations.
+- `ldapts` -- LDAP client for Active Directory authentication. Pure JavaScript, no native dependencies. Used to bind and search against AD/LDAP servers.
 
 ### npm overrides
 
