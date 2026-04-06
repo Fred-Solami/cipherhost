@@ -5,6 +5,7 @@ import { promisify } from 'util';
 import { getDatabase } from '../config/database';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { notificationService } from './notification-service';
 
 const execAsync = promisify(exec);
 
@@ -78,10 +79,12 @@ export class BackupManager {
 
     this.scheduledTimer = setInterval(async () => {
       try {
-        await this.createBackup('scheduled');
+        const backup = await this.createBackup('scheduled');
         logger.info('Scheduled backup completed');
+        notificationService.alertBackupCompleted(backup.filename, backup.sizeBytes / 1024);
       } catch (error) {
         logger.error(`Scheduled backup failed: ${error}`);
+        notificationService.alertBackupFailed(String(error));
       }
     }, intervalMs);
 

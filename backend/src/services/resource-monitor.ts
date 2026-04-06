@@ -3,6 +3,7 @@ import { getDatabase } from '../config/database';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import { AuditLogger } from './audit-logger';
+import { notificationService } from './notification-service';
 
 export interface ResourceLimits {
   maxMemoryMB: number | null;
@@ -137,6 +138,13 @@ export class ResourceMonitor {
             dep.project_id,
             null,
             `Stopped: memory ${memMB}MB exceeded limit ${limits.maxMemoryMB}MB`
+          );
+
+          notificationService.alertMemoryExceeded(
+            dep.name,
+            dep.project_id,
+            memMB,
+            limits.maxMemoryMB
           );
         } catch (error) {
           logger.error(`Failed to stop over-limit process ${dep.name}: ${error}`);

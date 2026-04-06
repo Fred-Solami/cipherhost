@@ -14,18 +14,21 @@ import {
   XCircle,
   AlertTriangle,
   Cpu,
+  Bell,
+  Send,
 } from 'lucide-react';
-import { serviceApi, backupApi, resourceApi, apacheApi, ldapApi } from '../services/api';
-import type { ServiceStatus, BackupMetadata, SystemResources, ApacheStatus, LdapStatus } from '../types';
+import { serviceApi, backupApi, resourceApi, apacheApi, ldapApi, notificationApi } from '../services/api';
+import type { ServiceStatus, BackupMetadata, SystemResources, ApacheStatus, LdapStatus, NotificationConfig } from '../types';
 
 export default function SystemSettings() {
-  const [activeTab, setActiveTab] = useState<'service' | 'backups' | 'resources' | 'integrations'>('service');
+  const [activeTab, setActiveTab] = useState<'service' | 'backups' | 'resources' | 'integrations' | 'notifications'>('service');
 
   const tabs = [
     { id: 'service' as const, label: 'Windows Service', icon: Server },
     { id: 'backups' as const, label: 'Backups', icon: Database },
     { id: 'resources' as const, label: 'Resources', icon: Cpu },
     { id: 'integrations' as const, label: 'Integrations', icon: Globe },
+    { id: 'notifications' as const, label: 'Notifications', icon: Bell },
   ];
 
   return (
@@ -53,6 +56,7 @@ export default function SystemSettings() {
       {activeTab === 'backups' && <BackupsTab />}
       {activeTab === 'resources' && <ResourcesTab />}
       {activeTab === 'integrations' && <IntegrationsTab />}
+      {activeTab === 'notifications' && <NotificationsTab />}
     </div>
   );
 }
@@ -434,6 +438,95 @@ function IntegrationsTab() {
             )}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Notifications Tab ───
+
+function NotificationsTab() {
+  const { data: cfg, isLoading } = useQuery<NotificationConfig>({
+    queryKey: ['notification-config'],
+    queryFn: async () => (await notificationApi.config()).data,
+  });
+
+  const testMutation = useMutation({
+    mutationFn: () => notificationApi.test(),
+  });
+
+  if (isLoading) {
+    return <div className="text-gray-400">Loading notification settings...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-dark-card border border-dark-border rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Bell className="w-5 h-5 text-blue-400" />
+          Email Notifications
+        </h3>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+          <StatusCard label="Enabled" value={cfg?.enabled ? 'Yes' : 'No'} ok={cfg?.enabled} />
+          <StatusCard label="SMTP Host" value={cfg?.smtpHost || 'Not set'} ok={!!cfg?.smtpHost} />
+          <StatusCard label="SMTP Port" value={String(cfg?.smtpPort || 587)} />
+          <StatusCard label="From" value={cfg?.fromEmail || 'Not set'} />
+          <StatusCard label="From Name" value={cfg?.fromName || 'CipherHost'} />
+          <StatusCard label="Admin Email" value={cfg?.adminEmail || 'Not set'} ok={!!cfg?.adminEmail} />
+        </div>
+
+        {cfg?.enabled ? (
+          <div>
+            <ActionButton
+              onClick={() => testMutation.mutate()}
+              loading={testMutation.isPending}
+              icon={Send}
+              label="Send Test Email"
+              variant="primary"
+            />
+            {testMutation.isSuccess && (
+              <p className="mt-2 text-xs text-green-400">
+                {testMutation.data?.data?.success
+                  ? 'Test email sent successfully. Check your inbox.'
+                  : `Failed: ${testMutation.data?.data?.error || 'Unknown error'}`}
+              </p>
+            )}
+            {testMutation.isError && (
+              <p className="mt-2 text-xs text-red-400">Failed to send test email</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500">
+            Notifications are disabled. Set SMTP_ENABLED=true and configure SMTP settings in the backend .env file to enable email alerts.
+          </p>
+        )}
+      </div>
+
+      <div className="bg-dark-card border border-dark-border rounded-xl p-6">
+        <h3 className="text-sm font-semibold text-white mb-3">Alert triggers</h3>
+        <div className="space-y-2 text-sm text-gray-400">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+            <span>Application crash (max restarts exceeded)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+            <span>Memory limit exceeded (process stopped)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+            <span>HTTP health check failure</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-blue-400 flex-shrink-0" />
+            <span>Scheduled backup completed or failed</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-blue-400 flex-shrink-0" />
+            <span>Deployment succeeded or failed</span>
+          </div>
+        </div>
       </div>
     </div>
   );

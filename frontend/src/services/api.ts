@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Deployment, DeploymentRequest, ProcessInfo, LoginResponse, User, DeploymentHistory, DeploymentLogs, WebhookConfig, AuditLog, DomainRecord, ServiceStatus, BackupMetadata, BackupConfig, SystemResources, ResourceLimits, ApacheStatus, LdapStatus } from '../types';
+import { Deployment, DeploymentRequest, ProcessInfo, LoginResponse, User, DeploymentHistory, DeploymentLogs, WebhookConfig, AuditLog, DomainRecord, ServiceStatus, BackupMetadata, BackupConfig, SystemResources, ResourceLimits, ApacheStatus, LdapStatus, NotificationConfig } from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -135,6 +135,12 @@ export const apacheApi = {
 export const ldapApi = {
   status: () => api.get<LdapStatus>('/system/ldap'),
   test: () => api.post<{ success: boolean; error?: string }>('/system/ldap/test'),
+};
+
+// ─── System: Notifications ───
+export const notificationApi = {
+  config: () => api.get<NotificationConfig>('/system/notifications'),
+  test: () => api.post<{ success: boolean; message?: string; error?: string }>('/system/notifications/test'),
 };
 
 export const healthApi = {

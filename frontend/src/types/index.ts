@@ -176,3 +176,15 @@ export interface LdapStatus {
   enabled: boolean;
   connected: boolean;
 }
+
+export interface NotificationConfig {
+  enabled: boolean;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUser: string;
+  smtpPass: string;
+  fromEmail: string;
+  fromName: string;
+  adminEmail: string;
+}

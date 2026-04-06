@@ -4,6 +4,7 @@ import { config } from '../config';
 import { logger } from '../utils/logger';
 import { PM2Integration } from './pm2-integration';
 import { Deployment, HealthStatus } from '../models/types';
+import { notificationService } from './notification-service';
 
 export class HealthMonitor {
   private db = getDatabase();
@@ -79,6 +80,11 @@ export class HealthMonitor {
         const httpOk = await this.httpHealthCheck(deployment.port, deployment.health_check_path);
         if (!httpOk) {
           logger.warn(`HTTP health check failed for ${projectId} at :${deployment.port}${deployment.health_check_path}`);
+          notificationService.alertHealthCheckFailed(
+            deployment.name,
+            projectId,
+            `HTTP check failed at :${deployment.port}${deployment.health_check_path}`
+          );
           return { type: 'Alert', message: 'HTTP health check failed but process is still running' };
         }
       }
@@ -112,6 +118,12 @@ export class HealthMonitor {
         .prepare('UPDATE deployments SET status = ? WHERE project_id = ?')
         .run('CRASHED', deployment.project_id);
 
+      notificationService.alertAppCrashed(
+        deployment.name,
+        deployment.project_id,
+        `Exceeded maximum restart limit (${maxRestarts} restarts)`
+      );
+
       return {
         type: 'Alert',
         message: `Max restarts exceeded (${maxRestarts})`,
@@ -141,6 +153,12 @@ export class HealthMonitor {
       this.db
         .prepare('UPDATE deployments SET status = ? WHERE project_id = ?')
         .run('CRASHED', deployment.project_id);
+
+      notificationService.alertAppCrashed(
+        deployment.name,
+        deployment.project_id,
+        `Process restart failed: ${error}`
+      );
 
       return {
         type: 'Error',

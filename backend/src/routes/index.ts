@@ -59,6 +59,8 @@ import {
   getApacheStatus,
   getLdapStatus,
   testLdapConnection,
+  getNotificationConfig,
+  testNotifications,
 } from '../controllers/system-controller';
 import { requireRole } from '../middleware/auth';
 
@@ -139,5 +141,9 @@ router.put('/deployments/:projectId/resources', requireRole('admin'), setResourc
 router.get('/system/apache', requireRole('admin'), getApacheStatus);
 router.get('/system/ldap', requireRole('admin'), getLdapStatus);
 router.post('/system/ldap/test', requireRole('admin'), testLdapConnection);
+
+// ─── Notifications ───
+router.get('/system/notifications', requireRole('admin'), getNotificationConfig);
+router.post('/system/notifications/test', requireRole('admin'), testNotifications);
 
 export default router;

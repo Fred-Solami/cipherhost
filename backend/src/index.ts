@@ -14,6 +14,7 @@ import { CaddyManager } from './services/caddy-manager';
 import { BackupManager } from './services/backup-manager';
 import { ResourceMonitor } from './services/resource-monitor';
 import { ApacheManager } from './services/apache-manager';
+import { notificationService } from './services/notification-service';
 import fs from 'fs';
 import path from 'path';
 
@@ -143,6 +144,9 @@ async function startServer() {
     // Start resource monitoring
     const resourceMonitor = new ResourceMonitor();
     resourceMonitor.start();
+
+    // Initialize notification service
+    notificationService.init();
 
     // Initialize Apache if enabled
     if (config.apache?.enabled) {

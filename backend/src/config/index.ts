@@ -80,5 +80,17 @@ export const config = {
     tlsRejectUnauthorized: process.env.LDAP_TLS_REJECT_UNAUTHORIZED !== 'false',
   },
 
+  notifications: {
+    enabled: process.env.SMTP_ENABLED === 'true',
+    smtpHost: process.env.SMTP_HOST || '',
+    smtpPort: parseInt(process.env.SMTP_PORT || '587', 10),
+    smtpSecure: process.env.SMTP_SECURE === 'true',
+    smtpUser: process.env.SMTP_USERNAME || '',
+    smtpPass: process.env.SMTP_PASSWORD || '',
+    fromEmail: process.env.SMTP_FROM_EMAIL || '',
+    fromName: process.env.SMTP_FROM_NAME || 'CipherHost',
+    adminEmail: process.env.SMTP_ADMIN_EMAIL || '',
+  },
+
   serviceAccount: process.env.SERVICE_ACCOUNT || 'CipherHostService',
 };

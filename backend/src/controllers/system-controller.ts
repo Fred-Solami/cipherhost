@@ -4,6 +4,7 @@ import { BackupManager } from '../services/backup-manager';
 import { ResourceMonitor } from '../services/resource-monitor';
 import { ApacheManager } from '../services/apache-manager';
 import { LdapAuthProvider } from '../services/ldap-auth';
+import { notificationService } from '../services/notification-service';
 import { logger } from '../utils/logger';
 
 const serviceManager = new WindowsServiceManager();
@@ -266,5 +267,36 @@ export async function testLdapConnection(req: Request, res: Response): Promise<v
   } catch (error) {
     logger.error(`Test LDAP error: ${error}`);
     res.status(500).json({ error: 'LDAP test failed' });
+  }
+}
+
+// ─── Notifications ───
+
+export async function getNotificationConfig(req: Request, res: Response): Promise<void> {
+  try {
+    const cfg = notificationService.getConfig();
+    res.json(cfg);
+  } catch (error) {
+    logger.error(`Get notification config error: ${error}`);
+    res.status(500).json({ error: 'Failed to get notification config' });
+  }
+}
+
+export async function testNotifications(req: Request, res: Response): Promise<void> {
+  try {
+    const result = await notificationService.testConnection();
+    if (result.ok) {
+      await notificationService.send(
+        'Test notification',
+        'This is a test notification from CipherHost. If you received this email, notifications are configured correctly.',
+        'info'
+      );
+      res.json({ success: true, message: 'Test email sent' });
+    } else {
+      res.json({ success: false, error: result.error });
+    }
+  } catch (error) {
+    logger.error(`Test notification error: ${error}`);
+    res.status(500).json({ error: 'Notification test failed' });
   }
 }
